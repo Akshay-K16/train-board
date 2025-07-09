@@ -1,6 +1,7 @@
 package com.example.trainboard
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -62,38 +63,27 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun TrainSelectorScreen(modifier: Modifier = Modifier) {
-    var selectedDepartureStation by remember { mutableStateOf("") }
-    var selectedArrivalStation by remember { mutableStateOf("") }
-    var isButtonEnabled by remember { mutableStateOf(false) }
-    var url by remember { mutableStateOf(" ") }
-    val stations = listOf("London Kings Cross", "Edinburgh", "Inverness", "Hull", "Darlington")
-    val stationCodesMap = mapOf("London Kings Cross" to "KGX", "Edinburgh" to "EDB", "Inverness" to "INV", "Hull" to "HUL", "Darlington" to "DAR")
+    var departureStation by remember { mutableStateOf<String?>(null) }
+    var arrivalStation by remember { mutableStateOf<String?>(null) }
+    val stationCodesMap = StationInformation.stationCodesMap
+    val isButtonEnabled = departureStation != null && arrivalStation != null && arrivalStation != departureStation
+    val uri = createURI(
+        stationCodesMap[departureStation].toString(),
+        stationCodesMap[arrivalStation].toString()
+    )
 
     Column(modifier.padding(20.dp)) {
-        DropdownMenu(
-            selectedDepartureStation,
-            onStationSelected = { selectedDepartureStation = it
-                url = CreateURL(
-                    stationCodesMap[selectedDepartureStation].toString(),
-                    stationCodesMap[selectedArrivalStation].toString()
-                )
-                isButtonEnabled = selectedDepartureStation.isNotEmpty() && selectedArrivalStation.isNotEmpty() && selectedArrivalStation != selectedDepartureStation
-            },
-            stations = stations,
+        StationDropdownMenu(
+            departureStation,
+            onStationSelected = { departureStation = it },
+            stations = ArrayList(stationCodesMap.keys),
             dropdownLabel = "From")
-        DropdownMenu(
-            selectedArrivalStation,
-            onStationSelected = {
-                selectedArrivalStation = it
-                url = CreateURL(
-                    stationCodesMap[selectedDepartureStation].toString(),
-                    stationCodesMap[selectedArrivalStation].toString()
-                )
-                isButtonEnabled = selectedDepartureStation.isNotEmpty() && selectedArrivalStation.isNotEmpty() && selectedArrivalStation != selectedDepartureStation
-            },
-            stations = stations,
+        StationDropdownMenu(
+            arrivalStation,
+            onStationSelected = { arrivalStation = it },
+            stations = ArrayList(stationCodesMap.keys),
             dropdownLabel = "To")
-        SubmitStations(url = url, isEnabled = isButtonEnabled)
+        SubmitButton(uri = uri, isEnabled = isButtonEnabled)
     }
 
 
@@ -101,58 +91,54 @@ fun TrainSelectorScreen(modifier: Modifier = Modifier) {
 
 
 @Composable
-fun DropdownMenu(selectedStation: String, onStationSelected: (String) -> Unit, stations: List<String>, dropdownLabel: String) {
-    var mExpanded by remember { mutableStateOf(false) }
-    var mTextFieldSize by remember { mutableStateOf(Size.Zero)}
-    val icon = if (mExpanded)
-        Icons.Filled.KeyboardArrowUp
-    else
-        Icons.Filled.KeyboardArrowDown
+fun StationDropdownMenu(selectedStation: String?, onStationSelected: (String) -> Unit, stations: List<String>, dropdownLabel: String) {
+    var expanded by remember { mutableStateOf(false) }
+    var textFieldSize by remember { mutableStateOf(Size.Zero)}
+    val icon = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown
 
-    Column() {
+    Column {
         OutlinedTextField(
             readOnly = true,
-            value = selectedStation,
+            value = selectedStation ?: "",
             onValueChange = {},
             modifier = Modifier
                 .fillMaxWidth()
                 .onGloballyPositioned { coordinates ->
-                    mTextFieldSize = coordinates.size.toSize()
+                    textFieldSize = coordinates.size.toSize()
                 },
             label = {Text(dropdownLabel)},
             trailingIcon = {
-                Icon(icon,"downArrow",
-                    Modifier.clickable { mExpanded = !mExpanded })
+                Icon(icon,"Clickable arrow to open or close the dropdown menu",
+                    Modifier.clickable { expanded = !expanded })
             }
         )
 
         DropdownMenu(
-            expanded = mExpanded,
-            onDismissRequest = { mExpanded = false },
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
             modifier = Modifier
-                .width(with(LocalDensity.current){mTextFieldSize.width.toDp()})
+                .width(with(LocalDensity.current){textFieldSize.width.toDp()})
         ) {
             stations.forEach { label ->
                 DropdownMenuItem(
                     text = { Text(text = label) },
                     onClick = {
                         onStationSelected(label)
-                        mExpanded = false
+                        expanded = false
                     }
                 )
             }
         }
-
     }
 }
 
 @Composable
-fun SubmitStations(url: String, isEnabled: Boolean) {
+fun SubmitButton(uri: Uri, isEnabled: Boolean) {
     val context = LocalContext.current
     Button(
         enabled = isEnabled,
         onClick = {
-        val intent = Intent(Intent.ACTION_VIEW, url.toUri())
+        val intent = Intent(Intent.ACTION_VIEW, uri)
         context.startActivity(intent)
     }) {
         Text("View Live Departures ")
@@ -160,6 +146,6 @@ fun SubmitStations(url: String, isEnabled: Boolean) {
 
 }
 
-fun CreateURL(toStation: String, fromStation: String): String {
-   return "https://www.lner.co.uk/travel-information/travelling-now/live-train-times/depart/$toStation/$fromStation/#LiveDepResults"
+fun createURI(toStation: String, fromStation: String): Uri {
+   return "https://www.lner.co.uk/travel-information/travelling-now/live-train-times/depart/$toStation/$fromStation/#LiveDepResults".toUri()
 }

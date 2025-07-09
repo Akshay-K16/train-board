@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    kotlin("plugin.serialization")
+    kotlin("plugin.serialization") version "2.2.0"
 }
 
 fun loadEnvFile(path: String): Map<String, String> {

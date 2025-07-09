@@ -1,7 +1,5 @@
 package com.example.trainboard
 
-import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -27,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.*
 import androidx.compose.ui.geometry.Size
@@ -34,9 +33,8 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
-import androidx.compose.ui.platform.LocalContext
 import com.example.trainboard.ui.theme.TrainBoardTheme
-import androidx.core.net.toUri
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -67,10 +65,6 @@ fun TrainSelectorScreen(modifier: Modifier = Modifier) {
     var arrivalStation by remember { mutableStateOf<String?>(null) }
     val stationCodesMap = StationInformation.stationCodesMap
     val isButtonEnabled = departureStation != null && arrivalStation != null && arrivalStation != departureStation
-    val uri = createURI(
-        stationCodesMap[departureStation].toString(),
-        stationCodesMap[arrivalStation].toString()
-    )
 
     Column(modifier.padding(20.dp)) {
         StationDropdownMenu(
@@ -83,7 +77,7 @@ fun TrainSelectorScreen(modifier: Modifier = Modifier) {
             onStationSelected = { arrivalStation = it },
             stations = ArrayList(stationCodesMap.keys),
             dropdownLabel = "To")
-        SubmitButton(uri = uri, isEnabled = isButtonEnabled)
+        SubmitButton(isEnabled = isButtonEnabled)
     }
 
 
@@ -133,19 +127,17 @@ fun StationDropdownMenu(selectedStation: String?, onStationSelected: (String) ->
 }
 
 @Composable
-fun SubmitButton(uri: Uri, isEnabled: Boolean) {
-    val context = LocalContext.current
+fun SubmitButton(isEnabled: Boolean) {
+    val client = ApiClient()
+    val coroutineScope = rememberCoroutineScope()
     Button(
         enabled = isEnabled,
         onClick = {
-        val intent = Intent(Intent.ACTION_VIEW, uri)
-        context.startActivity(intent)
+            coroutineScope.launch {
+                client.sendRequest()
+            }
     }) {
         Text("View Live Departures ")
     }
 
-}
-
-fun createURI(toStation: String, fromStation: String): Uri {
-   return "https://www.lner.co.uk/travel-information/travelling-now/live-train-times/depart/$toStation/$fromStation/#LiveDepResults".toUri()
 }

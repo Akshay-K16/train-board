@@ -10,7 +10,6 @@ import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.statement.HttpResponse
-import io.ktor.client.statement.bodyAsText
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 import java.text.SimpleDateFormat
@@ -45,19 +44,10 @@ class ApiClient {
         return url
     }
 
-//    fun getFares() = runBlocking {
-//        launch { sendRequest() }
-//    }
 
-
-    suspend fun sendRequest() {
-        val response: HttpResponse = client.get(getFaresUrl("KGX", "EDB"))
+    suspend fun getFares(originCrs: String, destinationCrs: String): FareResult {
+        val response: HttpResponse = client.get(getFaresUrl(originCrs, destinationCrs))
         val responseBody: FareResult = response.body()
-        println(responseBody.outboundJourneys.size)
-        responseBody.outboundJourneys.forEach {
-            println(it.originStation.displayName)
-            println(it.destinationStation.displayName)
-            println(it.departureTime)
-        }
+        return responseBody
     }
 }

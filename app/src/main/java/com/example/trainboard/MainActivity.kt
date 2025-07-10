@@ -33,6 +33,11 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
+import androidx.navigation.NavController
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.example.trainboard.ui.theme.TrainBoardTheme
 import kotlinx.coroutines.launch
 
@@ -49,8 +54,7 @@ class MainActivity : ComponentActivity() {
                                 .padding(paddingValues)
                                 .fillMaxSize()
                         ) {
-                            TrainSelectorScreen(modifier = Modifier.align(Alignment.Center))
-
+                            AppNavigation(Modifier.align(Alignment.Center))
                         }
                     },
                 )
@@ -60,24 +64,47 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun TrainSelectorScreen(modifier: Modifier = Modifier) {
+fun AppNavigation(modifier: Modifier, navController: NavHostController = rememberNavController()) {
+    val viewModel = ViewModel()
+    NavHost(navController = navController, startDestination = "main") {
+        composable("Main") {
+            TrainSelectorScreen(modifier = modifier, navController) { journeys ->
+                viewModel.journeys = journeys
+            }
+        }
+        composable(
+            "departures"
+        ) {
+            FareDisplayScreen(viewModel.journeys)
+        }
+    }
+}
+
+@Composable
+fun TrainSelectorScreen(
+    modifier: Modifier = Modifier,
+    navController: NavController,
+    updateViewModel: (List<Journey>) -> Unit
+) {
     var departureStation by remember { mutableStateOf<String?>(null) }
     var arrivalStation by remember { mutableStateOf<String?>(null) }
-    val stationCodesMap = StationInformation.stationCodesMap
-    val isButtonEnabled = departureStation != null && arrivalStation != null && arrivalStation != departureStation
+    val originCrs = StationInformation.getCrsFromName(departureStation)
+    val destinationCrs = StationInformation.getCrsFromName(arrivalStation)
+    val stationNames = StationInformation.getStationNames()
+    val isButtonEnabled = originCrs != null && destinationCrs != null && originCrs != destinationCrs
 
     Column(modifier.padding(20.dp)) {
         StationDropdownMenu(
             departureStation,
             onStationSelected = { departureStation = it },
-            stations = ArrayList(stationCodesMap.keys),
+            stations = stationNames,
             dropdownLabel = "From")
         StationDropdownMenu(
             arrivalStation,
             onStationSelected = { arrivalStation = it },
-            stations = ArrayList(stationCodesMap.keys),
+            stations = stationNames,
             dropdownLabel = "To")
-        SubmitButton(isEnabled = isButtonEnabled)
+        SubmitButton(isEnabled = isButtonEnabled, navController, originCrs ?: "", destinationCrs ?: "", updateViewModel)
     }
 
 
@@ -127,17 +154,32 @@ fun StationDropdownMenu(selectedStation: String?, onStationSelected: (String) ->
 }
 
 @Composable
-fun SubmitButton(isEnabled: Boolean) {
+fun SubmitButton(isEnabled: Boolean, navController: NavController, originCrs: String, destinationCrs: String, updateViewModel: (List<Journey>) -> Unit) {
     val client = ApiClient()
     val coroutineScope = rememberCoroutineScope()
     Button(
         enabled = isEnabled,
         onClick = {
             coroutineScope.launch {
-                client.sendRequest()
+                val fareResult = client.getFares(originCrs, destinationCrs)
+                updateViewModel(fareResult.outboundJourneys)
+                navController.navigate("departures")
             }
     }) {
-        Text("View Live Departures ")
+        Text("Submit")
+    }
+}
+
+@Composable
+fun FareDisplayScreen(journeys: List<Journey>) {
+    Text("Live Departures")
+    journeys.forEach {
+        print(it.originStation.displayName)
+        print(" -- ")
+        print(it.destinationStation.displayName)
+        print(" (")
+        print(it.departureTime)
+        println(")")
     }
 
 }

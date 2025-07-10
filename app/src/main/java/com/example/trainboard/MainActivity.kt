@@ -65,23 +65,25 @@ class MainActivity : ComponentActivity() {
 fun TrainSelectorScreen(modifier: Modifier = Modifier) {
     var departureStation by remember { mutableStateOf<String?>(null) }
     var arrivalStation by remember { mutableStateOf<String?>(null) }
-    val stationCodesMap = StationInformation.stationCodesMap
-    val isButtonEnabled = departureStation != null && arrivalStation != null && arrivalStation != departureStation
+    val originCrs = StationInformation.getCrsFromName(departureStation)
+    val destinationCrs = StationInformation.getCrsFromName(arrivalStation)
+    val stationNames = StationInformation.getStationNames()
+    val isButtonEnabled = originCrs != null && destinationCrs != null && originCrs != destinationCrs
     val uri = createURI(
-        stationCodesMap[departureStation].toString(),
-        stationCodesMap[arrivalStation].toString()
+        originCrs ?: "",
+        destinationCrs ?: ""
     )
 
     Column(modifier.padding(20.dp)) {
         StationDropdownMenu(
             departureStation,
             onStationSelected = { departureStation = it },
-            stations = ArrayList(stationCodesMap.keys),
+            stations = stationNames,
             dropdownLabel = "From")
         StationDropdownMenu(
             arrivalStation,
             onStationSelected = { arrivalStation = it },
-            stations = ArrayList(stationCodesMap.keys),
+            stations = stationNames,
             dropdownLabel = "To")
         SubmitButton(uri = uri, isEnabled = isButtonEnabled)
     }

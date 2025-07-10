@@ -1,5 +1,6 @@
 package com.example.trainboard
 
+import android.icu.util.Calendar
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -10,13 +11,18 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Button
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -28,9 +34,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.*
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import androidx.navigation.NavController
@@ -40,6 +48,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.trainboard.ui.theme.TrainBoardTheme
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.time.OffsetDateTime
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -172,14 +183,34 @@ fun SubmitButton(isEnabled: Boolean, navController: NavController, originCrs: St
 
 @Composable
 fun FareDisplayScreen(journeys: List<Journey>) {
-    Text("Live Departures")
-    journeys.forEach {
-        print(it.originStation.displayName)
-        print(" -- ")
-        print(it.destinationStation.displayName)
-        print(" (")
-        print(it.departureTime)
-        println(")")
+    LazyColumn {
+        items(journeys) {
+            FareDisplay(it)
+        }
     }
+}
 
+@Composable
+fun FareDisplay(journey: Journey) {
+    ElevatedCard(
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 6.dp
+        ),
+        modifier = Modifier
+            .fillMaxWidth(0.8F)
+    ) {
+        Text(
+            text = "${journey.originStation.crs} -> ${journey.destinationStation.crs} at ${formatTime(journey.departureTime)}",
+            modifier = Modifier
+                .padding(16.dp),
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+fun formatTime(input: String): String {
+    val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", Locale.UK)
+    val date = parser.parse(input)
+    val formatter = SimpleDateFormat("HH:mm", Locale.UK)
+    return formatter.format(date!!)
 }

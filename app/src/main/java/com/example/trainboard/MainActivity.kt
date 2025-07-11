@@ -20,13 +20,18 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -34,6 +39,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -53,12 +59,28 @@ import java.time.OffsetDateTime
 import java.util.Locale
 
 class MainActivity : ComponentActivity() {
+    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             TrainBoardTheme {
                 Scaffold(
+                    topBar = {
+                        TopAppBar(
+                            colors = TopAppBarDefaults.topAppBarColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                titleContentColor = MaterialTheme.colorScheme.primary,
+                            ),
+                            title =  {
+                                Text(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    textAlign = TextAlign.Center,
+                                    text = "Live Departures"
+                                )
+                            }
+                        )
+                    },
                     content = { paddingValues ->
                         Box(
                             modifier = Modifier
@@ -115,7 +137,17 @@ fun TrainSelectorScreen(
             onStationSelected = { arrivalStation = it },
             stations = stationNames,
             dropdownLabel = "To")
-        SubmitButton(isEnabled = isButtonEnabled, navController, originCrs ?: "", destinationCrs ?: "", updateViewModel)
+        Box(
+            modifier = Modifier.align(Alignment.End)
+        ) {
+            SubmitButton(
+                isEnabled = isButtonEnabled,
+                navController,
+                originCrs ?: "",
+                destinationCrs ?: "",
+                updateViewModel
+            )
+        }
     }
 
 
@@ -166,26 +198,47 @@ fun StationDropdownMenu(selectedStation: String?, onStationSelected: (String) ->
 
 @Composable
 fun SubmitButton(isEnabled: Boolean, navController: NavController, originCrs: String, destinationCrs: String, updateViewModel: (List<Journey>) -> Unit) {
+    var loading by remember { mutableStateOf(false) }
     val client = ApiClient()
     val coroutineScope = rememberCoroutineScope()
     Button(
-        enabled = isEnabled,
+        modifier = Modifier
+            .padding(10.dp),
+        enabled = isEnabled && !loading,
         onClick = {
+            loading = true
             coroutineScope.launch {
                 val fareResult = client.getFares(originCrs, destinationCrs)
+                loading = false
                 updateViewModel(fareResult.outboundJourneys)
                 navController.navigate("departures")
             }
     }) {
-        Text("Submit")
+        if (loading) IndeterminateCircularIndicator() else Text("Submit")
     }
 }
 
 @Composable
+fun IndeterminateCircularIndicator() {
+    CircularProgressIndicator(
+        color = MaterialTheme.colorScheme.secondary,
+        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+    )
+}
+
+@Composable
 fun FareDisplayScreen(journeys: List<Journey>) {
-    LazyColumn {
-        items(journeys) {
-            FareDisplay(it)
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+    ) {
+        LazyColumn(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            items(journeys) {
+                FareDisplay(it)
+            }
         }
     }
 }
@@ -197,11 +250,13 @@ fun FareDisplay(journey: Journey) {
             defaultElevation = 6.dp
         ),
         modifier = Modifier
-            .fillMaxWidth(0.8F)
+            .fillMaxWidth(0.95F)
+            .padding(10.dp)
     ) {
         Text(
             text = "${journey.originStation.crs} -> ${journey.destinationStation.crs} at ${formatTime(journey.departureTime)}",
             modifier = Modifier
+                .fillMaxWidth()
                 .padding(16.dp),
             textAlign = TextAlign.Center,
         )

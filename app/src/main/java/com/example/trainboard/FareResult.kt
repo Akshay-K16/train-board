@@ -6,8 +6,10 @@ import kotlinx.serialization.Serializable
 data class Journey(
     val originStation: Station,
     val destinationStation: Station,
-    val departureTime: String
-
+    val departureTime: String,
+    val arrivalTime: String,
+    val tickets: List<Ticket>,
+    val journeyDurationInMinutes: String
 )
 
 @Serializable
@@ -17,6 +19,14 @@ data class Station(
 )
 
 @Serializable
+data class Ticket(
+    val name: String,
+    val priceInPennies: String
+)
+
+
+
+@Serializable
 data class FareResult(
-    val outboundJourneys: List<Journey>
+    val outboundJourneys: List<Journey>,
 )

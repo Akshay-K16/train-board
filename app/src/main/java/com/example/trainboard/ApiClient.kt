@@ -10,6 +10,7 @@ import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.statement.HttpResponse
+import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 import java.text.SimpleDateFormat
@@ -45,9 +46,16 @@ class ApiClient {
     }
 
 
-    suspend fun getFares(originCrs: String, destinationCrs: String): FareResult {
+    suspend fun getFares(originCrs: String, destinationCrs: String): FareResult? {
         val response: HttpResponse = client.get(getFaresUrl(originCrs, destinationCrs))
-        val responseBody: FareResult = response.body()
-        return responseBody
+        when (response.status.value) {
+            200 -> {
+                 val responseBody: FareResult = response.body()
+                 return responseBody
+            }
+            else -> {
+                return null
+            }
+        }
     }
 }
